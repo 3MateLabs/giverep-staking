@@ -123,3 +123,48 @@ fun test_coin_accessor() {
 
     scenario.end();
 }
+
+#[test]
+fun test_merge() {
+    let mut scenario = ts::begin(ALICE);
+
+    // Stake two coins
+    {
+        let ctx = scenario.ctx();
+        let coin1 = coin::mint_for_testing<SUI>(100, ctx);
+        giverep_staking::stake(coin1, ctx);
+    };
+
+    scenario.next_tx(ALICE);
+    {
+        let ctx = scenario.ctx();
+        let coin2 = coin::mint_for_testing<SUI>(250, ctx);
+        giverep_staking::stake(coin2, ctx);
+    };
+
+    // Merge the two staked coins
+    scenario.next_tx(ALICE);
+    {
+        let mut staked1 = scenario.take_from_sender<StakedCoin<SUI>>();
+        let staked2 = scenario.take_from_sender<StakedCoin<SUI>>();
+
+        // Merge staked2 into staked1
+        giverep_staking::merge(&mut staked1, staked2);
+
+        // Verify the merged value
+        assert!(giverep_staking::value(&staked1) == 350);
+
+        ts::return_to_sender(&scenario, staked1);
+    };
+
+    // Unstake and verify final value
+    scenario.next_tx(ALICE);
+    {
+        let staked = scenario.take_from_sender<StakedCoin<SUI>>();
+        let coin = giverep_staking::unstake(staked);
+        assert!(coin.value() == 350);
+        coin::burn_for_testing(coin);
+    };
+
+    scenario.end();
+}

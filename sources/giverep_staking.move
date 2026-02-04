@@ -31,6 +31,14 @@ public fun unstake<T>(staked: StakedCoin<T>): Coin<T> {
     coin
 }
 
+/// Merge another StakedCoin into this one, combining their values.
+/// The `other` StakedCoin is consumed and destroyed.
+public fun merge<T>(self: &mut StakedCoin<T>, other: StakedCoin<T>) {
+    let StakedCoin { id, coin } = other;
+    object::delete(id);
+    self.coin.join(coin);
+}
+
 /// Get the value of staked coins without consuming the StakedCoin.
 public fun value<T>(staked: &StakedCoin<T>): u64 {
     staked.coin.value()
